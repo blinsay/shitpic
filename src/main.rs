@@ -1,10 +1,8 @@
-use std::{
-    io::{stdout, Write},
-    path::{Path, PathBuf},
-};
+use std::io::{Cursor, Write};
 
 use anyhow::Context as _;
 use clap::Parser;
+use clio::{Input, Output};
 use image::{
     codecs::jpeg::{JpegDecoder, JpegEncoder},
     io::Reader as ImageReader,
@@ -33,16 +31,18 @@ struct Opts {
     )]
     quality: u8,
 
-    /// The path to the input image.
-    input_path: PathBuf,
+    /// The path or URL of the input image (or '-' for STDIN).
+    input: Input,
 
-    /// The path to write the shitpic to.
-    output_path: Option<PathBuf>,
+    /// The path to write the shitpic to, the URL to post the shitpic to, or '-' for STDOUT.
+    #[arg(default_value = "-")]
+    output: Output,
 }
 
 fn main() -> anyhow::Result<()> {
-    let opts = Opts::parse();
-    let input_img = read_image(&opts.input_path)?;
+    let mut opts = Opts::parse();
+    let input_img = read_image(&mut opts.input)
+        .with_context(|| format!("reading image from {} failed", opts.input))?;
 
     let buf_len = input_img.as_bytes().len();
     let mut decode_buf = Vec::with_capacity(buf_len);
@@ -78,30 +78,31 @@ fn main() -> anyhow::Result<()> {
         ec.write_image(img, width, height, color_type).unwrap();
     }
 
-    write_output(opts.output_path, &encode_buf)?;
+    write_output(&mut opts.output, &encode_buf)
+        .with_context(|| format!("writing image to {} failed", opts.output))?;
 
     Ok(())
 }
 
-fn read_image<P: AsRef<Path>>(input_path: P) -> anyhow::Result<DynamicImage> {
-    let input_path = input_path.as_ref();
-    let reader = ImageReader::open(input_path)
-        .with_context(|| format!("failed to open input file: {}", input_path.display()))?;
+fn read_image(input: &mut Input) -> anyhow::Result<DynamicImage> {
+    // Buffer image into memory so we can taste what the format is.
+    let mut data = Vec::with_capacity(1024 * 1024 * 10);
+    input
+        .lock()
+        .read_to_end(&mut data)
+        .context("reading input data")?;
 
+    let reader = ImageReader::new(Cursor::new(data));
     let reader = reader
         .with_guessed_format()
-        .context("error guessing input format")?;
+        .context("guessing input format")?;
 
-    reader.decode().context("decoding image failed")
+    reader.decode().context("decoding image")
 }
 
-fn write_output<P: AsRef<Path>>(output_path: Option<P>, data: &[u8]) -> anyhow::Result<()> {
-    let output_path = output_path.as_ref().map(|p| p.as_ref());
-    // match and then dispatch, intead of returning some kind of boxed writer
-    // and doing dynamic dispatch that way.
-    match output_path {
-        None => stdout().write_all(data).context("writing image failed"),
-        Some(path) => std::fs::write(path, data)
-            .with_context(|| format!("writing image to {} failed", path.display())),
-    }
+fn write_output(output: &mut Output, data: &[u8]) -> anyhow::Result<()> {
+    output
+        .lock()
+        .write_all(data)
+        .context("writing output")
 }
