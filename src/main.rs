@@ -13,6 +13,7 @@ static SHITPIC_PANIC: &str = "shitpic compression produced an invalid jpeg. this
 
 /// Mr. Evrart is helping me with my memes.
 #[derive(Debug, Parser)]
+#[command(version, arg_required_else_help(true))]
 struct Opts {
     /// The number of rounds of jpeg compression to apply.
     #[arg(
@@ -22,8 +23,8 @@ struct Opts {
     )]
     rounds: u64,
 
-    /// The quality of JPEG to apply. Choose a lower value
-    /// for shittier pics, faster.
+    /// The quality of JPEG to apply. Choose a lower value for shittier pics,
+    /// faster.
     #[arg(
         long,
         default_value_t = 10,
@@ -34,7 +35,8 @@ struct Opts {
     /// The path or URL of the input image (or '-' for STDIN).
     input: Input,
 
-    /// The path to write the shitpic to, the URL to post the shitpic to, or '-' for STDOUT.
+    /// The path to write the shitpic to, the URL to post the shitpic to, or '-'
+    /// for STDOUT.
     #[arg(default_value = "-")]
     output: Output,
 }
@@ -101,8 +103,5 @@ fn read_image(input: &mut Input) -> anyhow::Result<DynamicImage> {
 }
 
 fn write_output(output: &mut Output, data: &[u8]) -> anyhow::Result<()> {
-    output
-        .lock()
-        .write_all(data)
-        .context("writing output")
+    output.lock().write_all(data).context("writing output")
 }
