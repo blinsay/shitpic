@@ -1,9 +1,17 @@
 [package]
 name = "shitpic"
 version = "0.1.0"
+authors = ["Ben Linsay <blinsay@gmail.com>"]
+description = """"
+Your jpegs are clear and it's rather unbecoming. They're supposed to be the
+opposite of that: compressed.
+"""
+license = "GPL-2.0-only"
+categories = ["command-line-utilities"]
+keywords = ["shitpic", "deepfried", "compression"]
+repository = "https://github.com/blinsay/shitpic"
+documentation = "https://github.com/blinsay/shitpic"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.79"
